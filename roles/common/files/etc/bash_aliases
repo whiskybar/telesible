@@ -1,0 +1,21 @@
+alias d="ls"
+alias l="ls"                    # classical listing.
+alias r="ls -tr"                # sort by timestamp, reverse
+alias ll="ls -l"                # List detailled.
+alias llh="ls -lh"              # List detailed with nice sizes
+alias la='ls -a'                                # List all.
+alias lsd="ls -d */"            # List only the directory.
+alias cd..="cd .."
+alias s="cd .."
+alias p="cd -"
+
+alias md="mkdir"
+alias rd="rmdir"
+alias dff="df -h"
+alias duu='du -h'
+alias ack=ack-grep
+alias please='sudo !!'
+alias finda='find . -name'
+
+mkcd () { mkdir -p "$1" && cd "$1"; }
+

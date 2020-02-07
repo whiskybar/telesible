@@ -1,0 +1,50 @@
+[DEFAULT]
+ignoreip = 127.0.0.1/8 {{ controller_ips }}
+
+[ssh]
+findtime = 60
+maxretry = 3
+
+{% if 'web' in group_names %}
+{% if access_log %}
+[apache-wp-login]
+enabled  = true
+port     = http,https
+filter   = apache-wp-login
+logpath  = /var/log/apache2/access.log
+findtime = 60
+maxretry = 3
+
+[apache-wp-xmlrpc]
+enabled  = true
+port     = http,https
+filter   = apache-wp-xmlrpc
+logpath  = /var/log/apache2/access.log
+findtime = 60
+maxretry = 3
+{% endif %}
+{% endif %}
+
+[pure-ftpd]
+enabled  = true
+port     = ftp,ftp-data,ftps,ftps-data
+filter   = pure-ftpd
+action   = iptables-multiport[name=pureftpd, port="ftp,ftp-data,ftps,ftps-data", protocol=tcp]
+logpath  = /var/log/syslog
+bantime  = 3600
+maxretry = 3
+
+{% if 'mailserver' in group_names %}
+[dovecot]
+enabled  = true
+bantime  = 3600
+maxretry = 3
+
+[exim]
+enabled  = true
+port     = smtp,ssmtp
+filter   = exim-auth
+logpath  = /var/log/exim4/mainlog
+bantime  = 3600
+maxretry = 5
+{% endif %}

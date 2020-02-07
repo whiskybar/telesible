@@ -1,0 +1,50 @@
+html, body					{ margin: 0; padding: 0; font-family:  Tahoma, Arial, Helvetica, sans-serif; background: url(bg.jpg) left top repeat-x #ffffff; }
+
+/*---------- obecne --------------*/
+
+a, a:link 				{	color: #ff7800;	font-weight: normal;	text-decoration: underline;}
+a:hover					  { text-decoration: none; font-weight: normal;}
+
+em                {font-size: 12px; font-weight: italic;}
+
+/*---------- layout --------------*/
+
+#background       { padding: 0; margin: 0px; }
+#obsah 						{	width: 746px; height: 409px; text-align: center;	margin: 0px auto; background: url(obsah.jpg) left top no-repeat; position: relative; }
+#nadhlavicka 						{	width: 746px; height: 52px; text-align: center;	margin: 0px auto; background: url(nadhlavicka.jpg) left top no-repeat; position: relative; }
+#hlavicka 						{	width: 746px; height: 149px; text-align: center;	margin: 0px auto; background: url(hlavicka.jpg) left top no-repeat; position: relative; }
+
+
+#top_domena h1 				{	width: 746px; margin: 0; position: absolute; left: 0px; top: 15px; color: #ff7800;	font-weight: normal; text-align: center; text-decoration: none; font-size: 20px;}
+#popis h2 				{	width: 415px; margin: 0; position: absolute; left: 160px; top: 42px; line-height: 22px; color: #606060;	font-weight: normal; text-align: center; text-decoration: none; font-size: 14px;}
+
+#registrace a 		{	background: url(li-left.jpg) left 2px no-repeat; width: 110px; padding: 0 0 0 25px; margin: 0; position: absolute; left: 200px; bottom: 35px; color: #ff7800;	font-weight: normal; text-align: left; text-decoration: underline; font-size: 12px;}
+#registrace a:hover 		{ text-decoration: none; }
+
+#stranky a 		{	background: url(li-right.jpg) right 2px no-repeat; width: 110px; padding: 0 25px 0 0px; margin: 0; position: absolute; right: 200px; bottom: 35px; color: #ff7800;	font-weight: normal; text-align: left; text-decoration: underline; font-size: 12px;}
+#stranky a:hover 		{ text-decoration: none; }
+
+#left 				{	width: 192px; margin: 0; position: absolute; left: 0px; bottom: 70px; }
+#left .popisek 				{	width: 170px; margin: 0; position: absolute; left: -30px; bottom: 25px; color: #414141;	font-weight: normal; text-align: left; text-decoration: none; font-size: 12px;}
+#left .nadpis1 a 				{	width: 40px; margin: 0; position: absolute; right: 33px; bottom: 42px; color: #ff7800;	font-weight: normal; text-align: left; text-decoration: none; font-size: 17px;}
+#left .nadpis1 a:hover 				{	text-decoration: underline;}
+#left .nadpis2				{	width: 80px; margin: 0; position: absolute; right: -2px; bottom: 29px; color: #7a7a7a;	font-weight: normal; text-align: left; text-decoration: none; font-size: 12px;}
+
+#right 				{	width: 190px; margin: 0; position: absolute; right: 53px; bottom: 200px; }
+#right .popisek 				{	width: 120px; margin: 0; position: absolute; left: 0px; bottom: 25px; color: #414141;	font-weight: normal; text-align: left; text-decoration: none; font-size: 12px;}
+#right .nadpis1 a 				{	width: 40px; margin: 0; position: absolute; right: 40px; bottom: 30px; color: #ff7800;	font-weight: normal; text-align: left; text-decoration: none; font-size: 17px;}
+#right .nadpis1 a:hover 				{	text-decoration: underline;}
+#right .nadpis2				{	width: 80px; margin: 0; position: absolute; right: 4px; bottom: 17px; color: #7a7a7a;	font-weight: normal; text-align: left; text-decoration: none; font-size: 12px;}
+
+
+
+/*---------- paticka --------------*/
+#paticka						{	width: 746px;	height: 45px; background: url(bg-paticka.jpg) left top no-repeat; margin: 0px auto 0px auto;	padding: 0; color: white; font-size: 11px; line-height: 30px; position: relative;	}
+#paticka_in					{ text-align: center; padding: 18px 0 0 0;  }
+#paticka_text 			{	padding: 0px; margin: 0px 0px 0 0px;  color: #808080;	font-size: 11px;	font-weight: normal; text-align: center;}
+#paticka_text a			{ color: #808080;	font-size: 11px; font-weight: normal; text-align: center; text-decoration: underline; }
+#paticka_text a:hover			{ color: #808080;	font-size: 11px; font-weight: normal; text-align: center; text-decoration: none; }
+
+
+
+span.clearboth		 { clear: both; height: 0px; line-height: 0px; font-size: 0px; display: block; visibility: hidden; }

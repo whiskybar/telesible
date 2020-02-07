@@ -1,0 +1,18 @@
+- name: synchronize time
+  command: /sbin/hwclock --systohc
+
+- name: refresh locales
+  command: /usr/sbin/locale-gen
+
+- name: reload fail2ban
+  service: name=fail2ban state=reloaded
+
+- name: restart snmpd
+  service: name=snmpd state=restarted
+
+- name: reload ssh
+  service: name=ssh state=restarted
+
+- name: reload systemd-resolved
+  service: name=systemd-resolved state=restarted
+

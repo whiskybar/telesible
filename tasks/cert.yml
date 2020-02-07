@@ -1,0 +1,42 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: find certificates
+      set_fact:
+        private_certificates: "{{ query('fileglob', '/etc/ssl/private/' + pattern + '*.key') | map('basename') | map('splitext') | map('first') | list }}"
+        public_certificates: "{{ query('fileglob', '/etc/ssl/certs/' + pattern + '*.crt') | map('basename') | map('splitext') | map('first') | list }}"
+
+    - name: find valid domains
+      set_fact:
+        domains: "{{ private_certificates | intersect(public_certificates) }}"
+        le_domains: []
+        le_altnames: []
+
+    - name: find LE certificates without wildcards
+      include_tasks: innercert.yml
+      loop: "{{ domains }}"
+
+    - name: turn le_altnames into dictionary
+      set_fact: le_altnames="{{ dict(le_altnames) }}"
+
+    - name: le_domains
+      debug: msg={{ le_domains }}
+
+    - name: le_altnames
+      debug: msg={{ le_altnames }}
+
+    - name: exit if all LE certificates are managed
+      meta: end_play
+      when: "not le_domains"
+
+    - name: remove local certificates - keys
+      file: path=/etc/ssl/private/{{ item }}.key state=absent
+      loop: "{{ le_domains }}"
+
+    - name: remove local certificates - public
+      file: path=/etc/ssl/certs/{{ item }}.crt state=absent
+      loop: "{{ le_domains }}"
+
+    - name: set LE flag in the database
+      debug: msg="{{ lookup('mysql', 'UPDATE domains SET le = 1, server_aliases = %s WHERE domain = %s', le_altnames[item], item) }}"
+      loop: "{{ le_domains }}"

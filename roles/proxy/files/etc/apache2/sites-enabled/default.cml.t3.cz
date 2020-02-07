@@ -1,0 +1,24 @@
+Define CANONICAL_NAME cml.t3.cz
+
+ServerAdmin jbar@tele3.cz
+MDCertificateAgreement https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf
+MDNotifyCmd /usr/bin/sudo /bin/systemctl reload apache2
+MDomain ${CANONICAL_NAME}
+
+<VirtualHost *:80>
+    ServerName ${CANONICAL_NAME}
+    Protocols h2c http/1.1
+
+    Redirect / https://${CANONICAL_NAME}/
+</VirtualHost>
+
+
+<VirtualHost *:443>
+    ServerName ${CANONICAL_NAME}
+    Protocols h2 h2c http/1.1
+    SSLEngine on
+
+    ProxyPass /rundeck http://localhost:4440/rundeck
+    ProxyPassReverse /rundeck http://localhost:4440/rundeck
+</VirtualHost>
+

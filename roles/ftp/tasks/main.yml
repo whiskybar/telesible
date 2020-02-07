@@ -1,0 +1,65 @@
+- name: pureftpd packages
+  apt: name=pure-ftpd
+  notify:
+    - start pureftpd
+
+- name: pureftpd static config
+  copy: src=etc/pure-ftpd/conf dest=/etc/pure-ftpd
+  notify:
+    - reload pureftpd
+
+- name: pureftpd authentication
+  file: src=/etc/pure-ftpd/conf/PureDB dest=/etc/pure-ftpd/auth/50pure state=link
+  notify:
+    - reload pureftpd
+
+- name: check if we have apache certificates
+  stat: path="/etc/apache2/md/domains/{{ inventory_hostname }}"
+  register: apache_certificates
+
+- name: pureftpd certificate
+  assemble:
+    src: "/etc/apache2/md/domains/{{ inventory_hostname }}"
+    regexp: ".*\\.pem"
+    dest: /etc/ssl/private/pure-ftpd.pem
+    mode: 400
+  when: apache_certificates.stat.exists
+  notify:
+    - reload pureftpd
+
+- name: check if we have ftp certificates
+  stat: path=/etc/ssl/private/pure-ftpd.pem
+  register: ftp_certificates
+
+- name: enable TLS
+  copy: content="{{ ftp_certificates.stat.exists | ternary('1', '0') }}" dest=/etc/pure-ftpd/conf/TLS
+  notify:
+    - reload pureftpd
+
+- name: find owner UID
+  user: name=www-data
+  register: owner
+
+- name: find nobody UID
+  user: name=nobody
+  register: nobody
+
+- name: pureftpd accounts
+  template: src=etc/pure-ftpd/pureftpd.passwd dest=/etc/pure-ftpd/pureftpd.passwd
+  vars:
+    owner_uid: "{{ owner.uid }}"
+    nobody_uid: "{{ nobody.uid }}"
+  notify:
+    - refresh pureftpd database
+
+- name: data owner
+  user: name=www-data home=/var/www shell=/usr/sbin/nologin system=yes uid=33
+
+- name: data directory
+  file: path=/var/www/hosting owner=www-data group=www-data mode=775 state=directory
+
+- name: periodic quota check
+  cron:
+    name: pureftpd_quotas
+    job: "find /var/www/hosting -maxdepth 1 -name '*.*' | xargs -L 1 pure-quotacheck -u www-data -d"
+    special_time: hourly

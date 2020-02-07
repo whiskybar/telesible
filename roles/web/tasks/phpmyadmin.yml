@@ -1,0 +1,43 @@
+- name: phpmyadmin repository for phpmyadmin 4.8.X+
+  apt_repository: repo="ppa:uschok/phpmyadmin"
+
+- name: phpmyadmin packages
+  apt:
+    name:
+     - php-mysql
+     - phpmyadmin
+
+- name: phpmyadmin global config
+  lineinfile: path=/etc/dbconfig-common/phpmyadmin.conf regexp="dbc_dbserver=" line="dbc_dbserver=''"
+  notify:
+    - refresh phpmyadmin
+
+- name: phpmyadmin blowfish secret
+  copy: src=/var/lib/phpmyadmin/blowfish_secret.inc.php dest=/etc/phpmyadmin/conf.d/blowfish_secret.php remote_src=yes
+
+- name: phpmyadmin config temp dir
+  copy: content="<?php\n$cfg['TempDir'] = '/tmp/';" dest=/etc/phpmyadmin/conf.d/TempDir.php
+
+- name: phpmyadmin config cookies
+  copy: content="<?php\n$cfg['LoginCookieValidity'] = 3600;" dest=/etc/phpmyadmin/conf.d/LoginCookieValidity.php
+
+- name: phpmyadmin config php info
+  copy: content="<?php\n$cfg['ShowPhpInfo'] = true;" dest=/etc/phpmyadmin/conf.d/ShowPhpInfo.php
+
+- name: phpmyadmin configuration storage
+  template: src=etc/phpmyadmin/config-db.php dest=/etc/phpmyadmin/config-db.php
+
+- name: create phpmyadmin user
+  mysql_user:
+    name: pma
+    password: "{{ pma_password }}"
+    update_password: on_create
+    priv: "phpmyadmin.*:ALL PRIVILEGES"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+ 
+- name: create phpmyadmin databases
+  mysql_db:
+    name: phpmyadmin
+    state: import
+    target: /usr/share/phpmyadmin/sql/create_tables.sql
+    login_unix_socket: /var/run/mysqld/mysqld.sock

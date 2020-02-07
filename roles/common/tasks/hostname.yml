@@ -1,0 +1,63 @@
+- name: purge all related entries from /etc/hosts
+  lineinfile: dest=/etc/hosts regexp={{ item }} state=absent
+  loop:
+    - "{{ inventory_hostname }}"
+    - "{{ inventory_hostname_short }}"
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_default_ipv6.address|default('UNDEFINED') }}"
+
+- name: add entries to /etc/hosts (ipv4)
+  lineinfile: dest=/etc/hosts line="{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+
+- name: add entries to /etc/hosts (ipv6)
+  lineinfile: dest=/etc/hosts line="{{ ansible_default_ipv6.address }} {{ inventory_hostname }} {{ inventory_hostname_short }}"
+  when: ansible_default_ipv6.get('scope', 'UNDEFINED') == "global"
+
+- name: add gateways if ipv6 only
+  lineinfile: dest=/etc/hosts line="{{ item }}"
+  loop:
+    - "2001:1528:123:123::a228 keyserver.ubuntu.com"
+    - "2001:1528:123:123::a228 ppa.launchpad.net"
+    - "2001:1528:123:123::a228 boquila.canonical.com"
+    - "2001:1528:123:123::a228 cassava.canonical.com"
+  when: "'::' in ansible_host"
+
+- name: remove gateways if ipv4
+  lineinfile: dest=/etc/hosts regexp={{ item }} state=absent
+  loop:
+    - keyserver.ubuntu.com
+    - ppa.launchpad.net
+  when: "'::' not in ansible_host"
+
+- name: set the hostname for the current session
+  command: /bin/hostname {{ inventory_hostname }}
+  when: ansible_fqdn != inventory_hostname
+
+- name: preserve the hostname
+  hostname: name={{ inventory_hostname_short }}
+  when: ansible_hostname != inventory_hostname_short
+
+- name: enable global DNS servers
+  lineinfile: dest=/etc/systemd/resolved.conf regexp="DNS=" line="DNS=1.1.1.1 1.0.0.1 2606:4700:4700::1111 2606:4700:4700::1001"
+  notify:
+    - reload systemd-resolved
+
+- name: enable systemd-resolved
+  service: name=systemd-resolved enabled=yes
+
+- name: disable link specific DNS servers
+  lineinfile: dest=/etc/network/interfaces regexp="dns-" state=absent
+
+- name: disable resolvconf
+  apt: name=resolvconf state=absent purge=yes
+
+- name: apply handlers now
+  meta: flush_handlers
+
+- name: use the local DNS cache
+  copy:
+    content: |
+      nameserver 127.0.0.53
+      options edns0
+    dest: /etc/resolv.conf
+

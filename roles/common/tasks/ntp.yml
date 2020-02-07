@@ -1,0 +1,8 @@
+- name: install the ntp packages
+  apt: name=ntp
+  when: "'hetzner' not in group_names"
+  notify:
+    - synchronize time
+
+- name: set timezone
+  timezone: name="Europe/Prague"

@@ -1,0 +1,8 @@
+- name: find if managed with telesible
+  stat: path=/etc/telesible
+  register: telesible
+
+- name: exit if not managed with telesible
+  meta: end_host
+  when: not telesible.stat.exists
+

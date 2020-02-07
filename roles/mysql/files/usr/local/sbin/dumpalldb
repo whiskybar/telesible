@@ -1,0 +1,8 @@
+#!/bin/bash
+
+[ -x /usr/bin/mysqldump ] || exit 0
+mkdir -p /var/lib/dumps
+mysql -ss -e'SHOW DATABASES' | grep -v _schema |
+	while read DB; do
+		mysqldump -E -R $DB >/var/lib/dumps/$DB.sql
+	done

@@ -1,0 +1,40 @@
+- name: install locale packages
+  apt:
+    name:
+      - language-pack-en
+      - language-pack-de
+      - language-pack-cs
+      - language-pack-sk
+
+- name: modify locales
+  copy: content='{{ item.content|join("\n") }}' dest=/var/lib/locales/supported.d/{{ item.name }}
+  loop:
+    -
+      name: local
+      content:
+        - en_US.UTF-8 UTF-8
+    -
+      name: en
+      content:
+        - en_US.UTF-8 UTF-8
+        - en_GB.UTF-8 UTF-8
+    -
+      name: cs
+      content:
+        - cs_CZ.UTF-8 UTF-8
+    -
+      name: sk
+      content:
+        - sk_SK.UTF-8 UTF-8
+    -
+      name: de
+      content:
+        - de_DE.UTF-8 UTF-8
+  notify:
+    - refresh locales
+
+- name: default locale
+  copy: content='LANG="en_US.UTF-8"' dest=/etc/default/locale
+  notify:
+    - refresh locales
+

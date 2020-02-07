@@ -1,0 +1,29 @@
+- name: php repository for 7.1
+  apt_repository: repo="ppa:ondrej/php"
+
+- name: PHP 7.1 packages
+  apt:
+    name:
+      - php7.1-fpm
+      - php7.1-bz2
+      - php7.1-cli
+      - php7.1-curl
+      - php7.1-gd
+      - php7.1-imap
+      - php7.1-json
+      - php7.1-mbstring
+      - php7.1-mysql
+      - php7.1-opcache
+      - php7.1-readline
+      - php7.1-xmlrpc
+      - php7.1-xsl
+      - php7.1-zip
+      - php-gettext
+  notify:
+     - reload php7.1
+
+- name: Enable PHP 7.1
+  file: src=../conf-available/php7.1-fpm.conf dest=/etc/apache2/conf-enabled/php7.1-fpm.conf state=link force=yes
+  notify:
+      - reload apache
+

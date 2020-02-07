@@ -1,0 +1,28 @@
+- name: install maldet requirements
+  apt: name=inotify-tools
+
+- name: unpack the maldet archive
+  unarchive: src=maldetect-current.tar.gz dest=/tmp creates=/usr/local/maldetect/conf.maldet
+
+- name: install maldet
+  shell: cd /tmp/maldetect-1.6.4 && ./install.sh
+  args:
+    creates: /usr/local/maldetect/conf.maldet
+
+- name: enable maldet email
+  lineinfile: path=/usr/local/maldetect/conf.maldet regexp='^email_alert=' line='email_alert="1"'
+  notify:
+    - reload maldet
+
+- name: set maldet email
+  lineinfile: path=/usr/local/maldetect/conf.maldet regexp='^email_addr=' line='email_addr="maldet@tele3.cz"'
+  notify:
+    - reload maldet
+
+- name: enable maldet quarantine
+  lineinfile: path=/usr/local/maldetect/conf.maldet regexp='^quarantine_hits=' line='quarantine_hits="1"'
+  notify:
+    - reload maldet
+
+- name: set regular maldet scanning
+  cron: hour=2 minute=5 job="/usr/local/maldetect/maldet -b -r /var/www/hosting 2 >> /dev/null 2>&1" name=maldet_pub

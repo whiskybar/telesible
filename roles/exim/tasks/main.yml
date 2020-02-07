@@ -1,0 +1,31 @@
+- name: exim packages
+  apt: 
+    name:
+      - exim4-daemon-heavy
+      - ssl-cert
+      - p7zip-full
+      - s-nail
+
+- name: SSL Debian-exim permissions
+  user: name=Debian-exim groups=ssl-cert append=yes
+
+- name: SSL directory permissions
+  file: path=/etc/ssl/private mode=711
+
+- name: customize exim4.conf
+  template: src={{ item }} dest=/etc/exim4/exim4.conf mode=644
+  with_first_found:
+    - files: "{{ [inventory_hostname] + group_names + ['all'] }}"
+      paths:
+        - ../templates/etc/exim4/exim4.conf
+  notify:
+    - reload exim
+
+- name: DKIM key
+  copy: src=/etc/ssl/private/dkim.tele3.cz.key dest=/etc/ssl/private/dkim.tele3.cz.key owner=root group=Debian-exim mode=640
+  when: '"telemail" in group_names'
+
+- name: clean spool
+  copy: src=etc/cron.hourly/exim-clean-pool dest=/etc/cron.hourly/exim-clean-pool mode=755
+  when: '"telemail" in group_names'
+

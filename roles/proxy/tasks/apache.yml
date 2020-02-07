@@ -1,0 +1,46 @@
+- name: apache2 repository for 2.4.30+
+  apt_repository: repo="ppa:ondrej/apache2"
+
+- name: apache packages
+  apt:
+    name:
+      - apache2
+      - libapache2-mod-fcgid
+      - libapache2-mod-md
+      - cronolog
+      - openssl
+      - ca-certificates      
+
+- name: enable apache modules
+  shell: a2enmod {{ item }}
+  loop:
+    - actions
+    - alias
+    - fcgid
+    - headers
+    - http2
+    - macro
+    - md
+    - proxy_fcgi
+    - proxy_http
+    - rewrite
+    - ssl
+  notify:
+    - reload apache
+
+- name: remove example configs
+  file: path={{ item }} state=absent
+  ignore_errors: True
+  loop:
+    - /etc/apache2/sites-enabled/000-default.conf
+    - /etc/apache2/sites-available/000-default.conf
+    - /etc/apache2/sites-enabled/default-ssl.conf
+    - /etc/apache2/sites-available/default-ssl.conf
+    - /etc/apache2/conf-available/other-vhosts-access-log.conf
+    - /etc/apache2/conf-enabled/other-vhosts-access-log.conf
+
+- name: allow www-data to reload apache
+  copy: 
+    content: "www-data ALL=(ALL) NOPASSWD:/bin/systemctl\n"
+    dest: /etc/sudoers.d/apache
+    mode: 440

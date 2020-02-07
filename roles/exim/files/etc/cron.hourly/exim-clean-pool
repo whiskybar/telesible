@@ -1,0 +1,6 @@
+#!/bin/bash
+
+find /var/lib/amavis/virusmails -mmin +60 -delete 2>/dev/null
+find /usr/share/squirrelmail/plugins/attachment_doc/tmp -mtime +3 -delete 2>/dev/null
+find /var/spool/exim4/input -mtime +7 -delete 2>/dev/null
+find /var/spool/exim4/scan -mmin +60 -exec rm -rf {} \; 2>/dev/null || exit 0

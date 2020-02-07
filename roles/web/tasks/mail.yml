@@ -1,0 +1,7 @@
+- name: PHP maintenance scripts
+  copy: src=usr/local/bin/phpmail dest=/usr/local/bin/phpmail mode=755
+ 
+- name: PHP mail log
+  file: path=/var/log/phpmail.log owner=www-data group=www-data state=touch
+
+

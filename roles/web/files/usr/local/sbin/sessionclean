@@ -1,0 +1,13 @@
+#!/bin/bash
+LIFE=0
+for file in `locate apache2/conf.d/php.ini`; do
+    VAL=`grep -P '^session.gc_maxlifetime' $file | grep -oP '[0-9]+'`
+    if [ $VAL > $LIFE ]; then
+        LIFE=$VAL
+    fi
+done
+LIFE=$(($LIFE/60))
+if [ $LIFE -eq 0 ]; then
+    LIFE=60;
+fi
+find -O3 "/var/www/sessions" -ignore_readdir_race -depth -mindepth 1 -name '*' -type f -cmin "+$LIFE" -delete

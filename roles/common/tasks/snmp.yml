@@ -1,0 +1,16 @@
+- name: snmp packages
+  apt: name=snmpd
+
+- name: snmp config
+  template: src=etc/snmp/snmpd.conf dest=/etc/snmp/snmpd.conf
+  notify:
+    - restart snmpd
+
+- name: register snmpd
+  delegate_to: 127.0.0.1
+  command: "ssh root@{{ mrtg.primary }} /etc/mrtg/acrnew.sh  {{ inventory_hostname.replace('.', '') }}  {{ inventory_hostname }}"
+
+- name: update snmpd
+  delegate_to: 127.0.0.1
+  command: "ssh root@{{ mrtg.primary }} /etc/mrtg/aupdnet.sh  {{ inventory_hostname.replace('.', '') }}"
+

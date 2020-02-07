@@ -1,0 +1,23 @@
+- name: fail2ban packages
+  apt:
+    name:
+      - fail2ban
+      - python3-pyinotify
+
+- name: is access.log there
+  stat: path=/var/log/apache2/acces.log
+  register: access_log
+
+- name: fail2ban config
+  template: src=etc/fail2ban/jail.local dest=/etc/fail2ban/jail.local
+  notify:
+    - reload fail2ban
+  vars:
+    controller_ips: "{{ lookup('pipe', 'hostname -I') }}"
+    access_log: access_log.stat.exists
+
+- name: fail2ban filters
+  copy: src=etc/fail2ban/filter.d dest=/etc/fail2ban
+  notify:
+    - reload fail2ban
+

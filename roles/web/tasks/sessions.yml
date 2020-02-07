@@ -1,0 +1,9 @@
+- name: create session directory
+  file: path=/var/www/sessions state=directory mode=1733 owner=root group=root
+
+- name: session cleaning script
+  copy: src=usr/local/sbin/sessionclean dest=/usr/local/sbin/sessionclean mode=755
+
+- name: session cleaning cron
+  copy: src=etc/cron.d/sessionclean dest=/etc/cron.d/sessionclean
+

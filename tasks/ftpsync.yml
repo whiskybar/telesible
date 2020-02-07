@@ -1,0 +1,25 @@
+- hosts: web
+  vars:
+    accounts: "{{ web.ftp }}"
+  tasks:
+    - include: telesible.yml
+
+    - name: find owner UID
+      user: name=www-data
+      register: owner
+
+    - name: find nobody UID
+      user: name=nobody
+      register: nobody
+
+    - name: pureftpd accounts
+      template: src=../roles/ftp/templates/etc/pure-ftpd/pureftpd.passwd dest=/etc/pure-ftpd/pureftpd.passwd
+      vars:
+        owner_uid: "{{ owner.uid }}"
+        nobody_uid: "{{ nobody.uid }}"
+      notify:
+        - refresh pureftpd database
+  handlers:
+    - name: refresh pureftpd database
+      command: pure-pw mkdb
+

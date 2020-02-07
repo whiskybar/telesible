@@ -1,0 +1,29 @@
+- hosts: all
+  tasks:
+    - name: copy all files
+      shell: "RSYNC_PASSWORD=WorjGfZpNtUFsULgMU6Y rsync -av  move@{{ source_host }}::www/hosting/{{ domain }} /var/www/hosting/"
+
+    - name: adjust file owner
+      file: path="/var/www/hosting/{{ domain }}" owner=www-data group=www-data recurse=yes
+
+    - name: move the databases if any
+      debug: msg="will move databases"
+
+    - name: set apache
+      lineinfile:
+        path: "/etc/apache2/sites-enabled/~generated.conf"
+        regexp: " {{ domain }} "
+        line: "Use VHost {{ line.domain }} '{{ line.aliases }}' {{ line.php_version }} {{ line.LE | ternary('LE', 'no_LE') }} {{ line.http2 | ternary('http2', 'no_http2') }}"
+      vars:
+        line: "{{ lookup('domain', domain) }}"
+      notify:
+        - reload apache
+
+    - name: set the new location in db
+      debug: msg="{{ lookup('mysql', 'UPDATE domains SET server = %s WHERE domain = %s', ansible_hostname, domain) }}"
+
+    - name: forward the old web
+      debug: msg="will forward the old web"
+  handlers:
+    - name: reload apache
+      service: name=apache2 state=reloaded

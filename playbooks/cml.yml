@@ -1,0 +1,5 @@
+- hosts: cml.t3.cz
+  roles:
+#    - common
+#    - exim
+    - proxy

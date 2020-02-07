@@ -1,0 +1,9 @@
+- import_tasks: apache.yml
+- import_tasks: php7.2.yml
+
+- name: copy the basic config
+  copy:
+    src: "etc/apache2/sites-enabled/default.{{ inventory_hostname }}"
+    dest: /etc/apache2/sites-enabled/000-default.conf
+  notify:
+    - reload apache

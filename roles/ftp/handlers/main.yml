@@ -1,0 +1,8 @@
+- name: refresh pureftpd database
+  command: pure-pw mkdb
+
+- name: start pureftpd
+  service: name=pure-ftpd state=started
+
+- name: reload pureftpd
+  service: name=pure-ftpd state=restarted

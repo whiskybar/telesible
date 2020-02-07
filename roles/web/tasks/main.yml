@@ -1,0 +1,34 @@
+- import_tasks: ../../proxy/tasks/apache.yml
+- import_tasks: php5.6.yml
+- import_tasks: php7.1.yml
+- import_tasks: php7.2.yml
+- import_tasks: php7.3.yml
+- import_tasks: mail.yml
+- import_tasks: sessions.yml
+- import_tasks: phpmyadmin.yml
+
+- name: more Apache variables
+  template: src=etc/apache2/mods-enabled/env.conf dest=/etc/apache2/mods-enabled/env.conf
+  notify:
+    - reload apache
+
+- name: Apache and PHP static config
+  copy: src=etc dest=/
+  notify:
+    - reload apache
+    - reload php5.6
+    - reload php7.1
+    - reload php7.2
+    - reload php7.3
+
+- name: Apache data directory
+  file: path=/var/www/hosting owner=www-data group=www-data mode=775 state=directory
+
+- name: Apache not-found site
+  copy: src=var/www/default dest=/var/www
+
+- name: PHP custom config directory
+  file: path=/etc/apache2/conf.d state=directory
+
+- import_tasks: sites.yml
+

@@ -1,0 +1,20 @@
+- name: reload apache
+  service: name=apache2 state=reloaded
+
+- name: restart apache
+  service: name=apache2 state=restarted
+
+- name: reload php5.6
+  service: name=php5.6-fpm state=reloaded
+
+- name: reload php7.1
+  service: name=php7.1-fpm state=reloaded
+
+- name: reload php7.2
+  service: name=php7.2-fpm state=reloaded
+
+- name: reload php7.3
+  service: name=php7.3-fpm state=reloaded
+
+- name: refresh phpmyadmin
+  command: "dpkg-reconfigure -f noninteractive -plow phpmyadmin"

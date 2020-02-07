@@ -1,0 +1,2 @@
+#!/bin/bash
+/usr/sbin/exim4 -t -i -oep -oMai $PWD "$@"

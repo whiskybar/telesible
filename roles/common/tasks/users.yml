@@ -1,0 +1,39 @@
+- name: create groups
+  group: name={{ item }} system=yes
+  loop:
+    - admin
+    - kvm
+    - libvirtd
+
+- name: create users
+  user: 
+    comment="{{ item.fullname }}"
+    groups="{% if item.username != 'hosting' %}admin,sudo,kvm,libvirtd{%endif%}"
+    name={{ item.username }}
+    password={{ item.password }}
+    shell=/bin/bash
+    update_password=on_create
+  loop: "{{ users }}"
+
+- name: set the root password
+  user: name=root password={{ root.password }}
+
+- name: distribute ssh keys for users
+  authorized_key: user={{ item.0.username }} key="{{ item.1 }}"
+  loop: "{{ users | subelements('authorized_keys') }}"
+
+- name: disable ssh access with passwords
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    regexp="^#?PasswordAuthentication"
+    line="PasswordAuthentication no"
+  notify:
+    - reload ssh
+
+- name: allow ssh users
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    regexp="^#?AllowUsers"
+    line="AllowUsers {{ users|join(' ', attribute='username') }} www-data {% for address in lookup('pipe', 'hostname -I').split(' ') %}root@{{ address }} {% endfor %} root@{{ lookup('dig', 'replicator.tele3.cz', 'qtype=A') }} root@{{ lookup('dig', 'replicator.tele3.cz', 'qtype=AAAA') }}"
+  notify:
+    - reload ssh

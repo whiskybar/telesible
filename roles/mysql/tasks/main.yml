@@ -1,0 +1,39 @@
+- name: install mariadb packages
+  apt: 
+    name:
+      - mariadb-client
+      - mariadb-server
+      - python3-pymysql
+
+- name: customize mysql config
+  copy: src=etc/mysql/mariadb.conf.d/60-tele3.cnf dest=/etc/mysql/mariadb.conf.d/60-tele3.cnf
+  notify:
+    - reload mysql
+
+- name: create admin user
+  mysql_user:
+    name: admin
+    password: "{{ mysql.admin.password }}"
+    encrypted: yes
+    host: localhost
+    priv: "*.*:ALL,GRANT"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: create creator user
+  mysql_user:
+    name: creator
+    password: "{{ mysql.creator.password }}"
+    encrypted: yes
+    host: "{{ lookup('dig', mysql.creator.host, 'qtype=A') }}"
+    priv: "*.*:ALL,GRANT"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: install mysql utilities
+  copy: src=usr/local/sbin dest=/usr/local mode=0755
+
+- name: enable daily backups
+  cron: name="backup all databases" hour=0 minute=43 job=/usr/local/sbin/dumpalldb cron_file=dumpalldb user=root
+
+- name: set cron mail
+  lineinfile: dest=/etc/cron.d/dumpalldb insertbefore='BOF' line='MAILTO=info@tele3.cz'
+

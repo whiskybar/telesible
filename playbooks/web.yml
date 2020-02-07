@@ -1,0 +1,14 @@
+- hosts: all
+  vars:
+    local_certs: "{{ lookup('fileglob', '/etc/ssl/certs/*.crt', wantlist=True) | map('basename') | map('splitext') | map('first') | list }}"
+    domains: "{{ web.domains | map(attribute='domain') | list | union([inventory_hostname]) }}"
+    pma_password: "{{ lookup('password', '/tmp/pma_password_' + inventory_hostname) }}"
+    accounts: "{{ web.ftp }}"
+  roles:
+    - common
+    - exim
+    - mysql
+    - rsync
+    - web
+    - maldet
+    - ftp

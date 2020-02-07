@@ -1,0 +1,3 @@
+{%- for account in accounts -%}
+{{ account.username }}:{{ account.password }}:{{ account.readonly | ternary(nobody_uid, owner_uid) }}:{{ account.readonly | ternary(nobody_uid, owner_uid) }}::{{ account.homedir }}:::::::{{ account.quota }}:::::
+{% endfor -%}

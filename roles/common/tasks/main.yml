@@ -1,0 +1,12 @@
+- name: mark managed with telesible
+  file: path=/etc/telesible state=touch
+
+- import_tasks: hostname.yml
+- import_tasks: sudo.yml
+- import_tasks: ntp.yml
+- import_tasks: packages.yml
+- import_tasks: locale.yml
+- import_tasks: bash.yml
+- import_tasks: fail2ban.yml
+- import_tasks: snmp.yml
+- import_tasks: users.yml

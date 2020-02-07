@@ -1,0 +1,421 @@
+{% set mail_domain = inventory_hostname.split('.')[-2:]|join('.') %}
+primary_hostname = {{ inventory_hostname }}
+qualify_domain = {{ mail_domain }}
+{% if not ansible_default_ipv6 %}disable_ipv6 = true{% endif %}
+
+headers_charset = UTF-8
+host_lookup = *
+rfc1413_hosts = *
+rfc1413_query_timeout = 0s
+
+ignore_bounce_errors_after = 2d
+timeout_frozen_after = 7d
+
+freeze_tell = jbar@tele3.cz
+never_users = root
+
+smtp_banner = "${primary_hostname} ESMTP Exim ${version_number} #${compile_number} ${tod_full} - MMVER"
+
+local_interfaces = <; ::0.25 ; 0.0.0.0.25; ::0.465; 0.0.0.0.465
+tls_on_connect_ports = 465
+tls_advertise_hosts = *
+tls_certificate = /etc/ssl/certs/{{ inventory_hostname }}.crt
+tls_privatekey = /etc/ssl/private/{{ inventory_hostname }}.key
+
+smtp_accept_max = 1000
+smtp_accept_max_per_host = 50
+smtp_accept_queue_per_connection = 0
+smtp_connect_backlog = 100
+
+log_selector = +smtp_connection +address_rewrite +all_parents +received_recipients
+
+acl_smtp_connect = acl_check_connect
+acl_smtp_rcpt = acl_check_rcpt
+acl_smtp_data = acl_check_data
+acl_not_smtp = acl_not_check
+acl_smtp_helo = acl_smtp_helo
+acl_smtp_mime = acl_smtp_mime
+
+SQLITEDB = /var/lib/telemail/db.sqlite3
+av_scanner = clamd:/var/run/clamav/clamd.ctl
+spamd_address = /var/run/spamd.sock
+
+domainlist local_domains = @mx_any
+addresslist local_recipients = sqlite;SQLITEDB \
+    SELECT address FROM addresses_account WHERE address = '$local_part@$domain' UNION \
+    SELECT alias FROM addresses_other WHERE '$local_part@$domain' LIKE alias UNION \
+    SELECT address FROM addresses_forward WHERE address = '$local_part@$domain';
+hostlist relay_from_hosts = {{ exim_relay_allowed|default('@[]') }}
+hostlist trusted_hosts = *.nic.cz : *.subreg.cz : *.ascio.com : *.seznam.cz : *.google.com : *.googlemail.com : monitoring.tele3.cz : sip.tele3.cz
+domainlist trash_domains = sqlite;SQLITEDB \
+    SELECT trash FROM domains_domaintrash WHERE domain = '$domain';
+hostlist banned_hosts = :
+addresslist postmasters = : double-bounce@*
+
+PRVS_SECRET = TodorJiriNinaPetrMartinRoman
+
+NOSPAM_SIZE = 128K
+hostlist nospam_hosts = sqlite;SQLITEDB \
+    SELECT host FROM spam_nospamhost \
+    WHERE '$sender_host_address' LIKE host OR '$sender_host_name' LIKE host;
+addresslist nospam_recipients = sqlite;SQLITEDB \                     
+    SELECT address FROM spam_nospamrecipient \
+    WHERE '$local_part@$domain' LIKE address;
+
+begin acl
+
+acl_smtp_helo:
+    drop
+        condition = ${if eq {$sender_helo_name}{ylmf-pc} {yes}{no}}
+        log_message = HELO/EHLO - ylmf-pc blocked
+        message = I Nailed You at HELO
+
+    accept
+
+
+
+
+acl_check_connect:
+    deny
+        message = Banned
+        hosts = +banned_hosts
+
+    defer
+        message = Slow down
+        hosts = !+relay_from_hosts : !+trusted_hosts
+        ratelimit = 100 / 1h
+        
+    defer
+        message = Slow down
+        hosts = !+relay_from_hosts : !+trusted_hosts
+        ratelimit = 100 / 1h / $sender_address
+
+	accept
+        
+acl_check_rcpt:
+	deny
+        message = Slow down
+        hosts = !+relay_from_hosts : !+trusted_hosts
+        authenticated = *
+        ratelimit = 300 / 1d / per_rcpt / $authenticated_id
+		log_message = RATE CHECK: $authenticated_id to send $sender_rate/$sender_rate_period
+
+    deny 
+        message = Address hacks not allowed
+        domains = +local_domains
+        local_parts = ^.*[@%!/|] : ^\\.
+         
+    deny
+        message = You are spam source, ask https://rbl.dc3.cz/?id=$sender_host_address
+        dnslists = rbl.dc3.cz
+        log_message = SPAM RBL: $authenticated_id to send
+
+    warn
+        message = Empty bounce signature
+        hosts = !+relay_from_hosts
+        senders = +postmasters
+        recipients = +local_recipients
+        set acl_c_bounce_empty = true
+    
+    warn
+        message = Invalid bounce address
+        hosts = !+relay_from_hosts
+        senders = +postmasters
+        !condition = ${prvscheck {$local_part@$domain}{PRVS_SECRET}{1}}
+        set acl_c_bounce_address = true
+
+    warn
+        message = Invalid bounce signature
+        hosts = !+relay_from_hosts
+        senders = +postmasters
+        !condition = $prvscheck_result
+        set acl_c_bounce_signature = true
+
+    accept
+        senders = +postmasters
+        
+    deny
+        message = Sender verification failed
+        log_message = Sender verification failed.
+        senders = !+local_recipients
+        !verify = sender
+
+    deny
+        message = Recipient not found
+        domains = !+trash_domains : +local_domains
+        !recipients = +local_recipients
+        
+    warn
+        message = No spam filtering
+        recipients = +nospam_recipients
+        set acl_c_nospam = true
+
+    accept
+        hosts = +relay_from_hosts
+        
+    accept
+        authenticated = *
+
+    deny
+        message = Relay not allowed
+        domains = !+local_domains
+
+    accept
+
+acl_check_data:
+    deny
+        message = Empty bounce signature
+        senders = +postmasters
+        condition = $acl_c_bounce_empty
+    
+    deny
+        message = Invalid bounce address
+        senders = +postmasters
+        condition = $acl_c_bounce_address
+
+    deny
+        message = Invalid bounce signature
+        senders = +postmasters
+        condition = $acl_c_bounce_signature
+
+
+    accept
+        senders = +postmasters
+   deny
+	message = No verifiable sender address in message headers
+	log_message = No verifiable sender address in message headers [$sender_address_domain]
+	!verify = header_sender
+
+    accept
+        hosts = +relay_from_hosts
+    
+    accept
+        authenticated = *
+
+    deny
+        message = Virus found ($malware_name)
+        hosts = !+trusted_hosts
+        malware = *
+
+    deny
+        message = Spam
+        hosts = !+nospam_hosts : !+trusted_hosts
+        !condition = $acl_c_nospam
+        condition = ${if <{$message_size}{NOSPAM_SIZE}}
+        spam = nobody
+
+    deny
+        message = Spam
+        condition = ${lookup sqlite{SQLITEDB \
+            SELECT 1 FROM spam_subject WHERE '${quote_sqlite:$h_subject:}' LIKE subject;}}
+        hosts = !+nospam_hosts : !+trusted_hosts
+        !condition = $acl_c_nospam
+
+    accept
+        add_header = X-Spam-Score: $spam_score ($spam_bar)
+
+acl_smtp_mime:
+
+    deny
+      message = A .zip attachment contains a Windows-executable file - \
+      blocked because we are afraid of new viruses \
+      not recognized [yet] by antiviruses.
+      condition = ${if match{$mime_filename}{\N(?i)\.zip$\N}}
+      condition = ${if def:sender_host_address}
+      !authenticated = *
+      decode = default
+      log_message = forbidden binary in attachment: filename=$mime_filename, \
+      recipients=$recipients
+      condition = ${if match{${run{/usr/bin/unzip -l \
+      $mime_decoded_filename}}}\
+      {\N(?i)\.(exe|com|vbs|bat|pif|scr|hta|js\
+      |cmd|chm|cpl|jsp|reg|vbe|lnk|dll|sys|btm|dat|msi|prf|vb|jar)\n\N}}
+
+   deny
+      message = Windows-executable attachments forbidden because we are \
+      afraid of new viruses not recognized [yet] by antiviruses.
+      condition = ${if def:sender_host_address}
+      !authenticated = *
+      log_message = forbidden attachment: filename=$mime_filename, \
+      content-type=$mime_content_type, recipients=$recipients
+      condition = ${if or{\
+      {match{$mime_content_type}{(?i)executable}}\
+      {match{$mime_filename}{\N(?i)\.(exe|com|vbs|bat|pif\
+      |scr|hta|js|cmd|chm|cpl|jsp|reg|vbe|lnk|dll|sys|btm|dat|msi|prf|vb|jar)$\N}}\
+      }}
+
+
+   deny
+      message = A .7z attachment contains a Windows-executable file - \
+      blocked because we are afraid of new viruses \
+      not recognized [yet] by antiviruses.
+      condition = ${if match{$mime_filename}{\N(?i)\.7z$\N}}
+      condition = ${if def:sender_host_address}
+      !authenticated = *
+      decode = default
+      log_message = forbidden binary in attachment: filename=$mime_filename, \
+      recipients=$recipients
+      condition = ${if match{${run{/usr/bin/7z l \
+      $mime_decoded_filename}}}\
+      {\N(?i)\.(exe|com|vbs|bat|pif|scr|hta|js\
+      |cmd|chm|cpl|jsp|reg|vbe|lnk|dll|sys|btm|dat|msi|prf|vb|jar)\n\N}}
+
+    accept
+
+acl_not_check:
+	deny
+        message = Slow down
+        !condition = ${if eq{$h_x-sender:}{}}
+        ratelimit = 300 / 1d / per_rcpt / $h_x-sender:
+		log_message = RATE CHECK: $h_x-sender: to send $sender_rate/$sender_rate_period
+
+    accept
+
+begin routers
+
+dnslookup:
+    driver = dnslookup
+    domains = !+local_domains
+    transport = remote_smtp
+    ignore_target_hosts = 0.0.0.0 : 127.0.0.0/8
+    no_more
+
+prvs_redirect:
+    driver = redirect
+    data = ${prvscheck {$local_part@$domain}{PRVS_SECRET}}
+    
+hosting_alias:
+    driver = redirect
+    data = ${lookup sqlite{SQLITEDB \
+        SELECT address \
+        FROM addresses_alias JOIN addresses_other \
+        ON addresses_alias.id = origin_id \
+        WHERE '$local_part@$domain' LIKE alias;}{$value}fail}
+    no_verify
+
+hosting_trash:
+    driver = redirect
+    condition = ${lookup sqlite{SQLITEDB \
+        SELECT address FROM addresses_account WHERE address = '$local_part@$domain' UNION \
+        SELECT address FROM addresses_forward WHERE address = '$local_part@$domain';}{false}{true}}
+    data = ${lookup sqlite{SQLITEDB SELECT trash FROM domains_domaintrash WHERE domain = '$domain';}{$value}fail}
+    no_verify
+
+hosting_forward:
+    driver = redirect
+    data = ${lookup sqlite{SQLITEDB \
+        SELECT GROUP_CONCAT(destination) \
+        FROM addresses_forward JOIN addresses_forwardedaddress \
+        ON addresses_forward.id = source_id \
+        WHERE address = '$local_part@$domain' \
+        GROUP BY source_id;}{$value}fail}
+    no_verify
+    one_time
+
+hosting_filter:
+    driver = redirect
+    file = /var/mail/$domain/$local_part/forward
+    no_verify
+    ignore_enotdir
+    allow_filter
+    allow_fail
+    user = hosting
+    file_transport = address_file
+    directory_transport = address_file
+    reply_transport = address_reply
+
+dovecot_lmtp:
+    driver = manualroute
+    domains = +local_domains
+    condition = ${lookup sqlite{SQLITEDB \
+        SELECT address FROM addresses_account WHERE address = '$local_part@$domain';}}
+    route_data = whatever
+    transport = lmtp
+
+begin transports
+
+hosting_delivery:
+    driver = appendfile
+    directory = /var/mail/$domain/$local_part/
+    create_directory
+    directory_mode = 0755
+    maildir_format
+    delivery_date_add 
+    envelope_to_add
+    return_path_add
+    user = hosting
+    group = hosting
+    mode = 0660
+    mode_fail_narrower = false
+
+address_file:
+    driver = appendfile
+    delivery_date_add
+    envelope_to_add
+    return_path_add
+
+address_reply:
+	driver = autoreply
+
+
+IMPLICIT_RETURN_PATH = www-data@{{ mail_domain }}
+DEFAULT_RP = php@secmail.cz
+FROM_ADDRESS = ${address:$reply_address}
+
+SIGN_RP = ${lookup sqlite{SQLITEDB \
+    SELECT address FROM addresses_account WHERE address = '$return_path' UNION \
+    SELECT alias FROM addresses_other WHERE '$return_path' LIKE alias UNION \
+    SELECT address FROM addresses_forward WHERE address = '$return_path';}{${prvs {$return_path}{PRVS_SECRET}}}{$return_path}}
+
+SIGN_DEFAULT_RETURN_PATH = ${lookup sqlite{SQLITEDB \
+    SELECT address FROM addresses_account WHERE address = 'DEFAULT_RP' UNION \
+    SELECT alias FROM addresses_other WHERE 'DEFAULT_RP' LIKE alias UNION \
+    SELECT address FROM addresses_forward WHERE address = 'DEFAULT_RP';}{${prvs {DEFAULT_RP}{PRVS_SECRET}}}{DEFAULT_RP}}
+
+SIGN_FA = ${lookup sqlite{SQLITEDB \
+    SELECT address FROM addresses_account WHERE address = 'FROM_ADDRESS' UNION \
+    SELECT alias FROM addresses_other WHERE 'FROM_ADDRESS' LIKE alias UNION \
+    SELECT address FROM addresses_forward WHERE address = 'FROM_ADDRESS';}{${prvs {FROM_ADDRESS}{PRVS_SECRET}}}{FROM_ADDRESS}}
+
+SIGN_VALID_FA = ${if eq{FROM_ADDRESS}{}{SIGN_DEFAULT_RETURN_PATH}{SIGN_FA}}
+SIGN_VALID_RP = ${if match_address{$return_path}{*@*}{SIGN_RP}fail}
+RETURN_PATH = ${if eq{$return_path}{IMPLICIT_RETURN_PATH}{SIGN_VALID_FA}{SIGN_VALID_RP}}
+remote_smtp:
+    driver = smtp
+    headers_remove = Sender : X-Sender
+    #TODO: check if $return_path belongs to localdomains before PVRS signing
+    return_path = RETURN_PATH
+    headers_rewrite = IMPLICIT_RETURN_PATH $reply_address sw
+    dkim_domain = ${domain:$return_path}
+    dkim_selector = tele3
+    dkim_private_key = /etc/ssl/private/dkim.tele3.cz.key
+
+lmtp:
+    driver = lmtp
+    return_path = ${if eq{$return_path}{IMPLICIT_RETURN_PATH}{FROM_ADDRESS}fail}
+    headers_rewrite = IMPLICIT_RETURN_PATH $reply_address sw
+    socket = /var/run/dovecot/lmtp
+    batch_max = 200
+
+                        
+begin retry
+
+*                      *           F,2h,15m; G,16h,1h,1.5; F,4d,6h
+
+
+begin rewrite
+
+
+begin authenticators
+                   
+dovecot_login:
+    driver = dovecot
+    public_name = LOGIN
+    server_socket = /var/run/dovecot/auth-exim
+    server_set_id = $auth1
+
+dovecot_plain:
+    driver = dovecot
+    public_name = PLAIN
+    server_socket = /var/run/dovecot/auth-exim
+    server_set_id = $auth1

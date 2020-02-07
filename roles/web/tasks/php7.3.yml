@@ -1,0 +1,26 @@
+- name: PHP 7.3 packages
+  apt:
+    name:
+      - php7.3-fpm
+      - php7.3-bz2
+      - php7.3-cli
+      - php7.3-curl
+      - php7.3-gd
+      - php7.3-imap
+      - php7.3-json
+      - php7.3-mbstring
+      - php7.3-mysql
+      - php7.3-opcache
+      - php7.3-readline
+      - php7.3-xmlrpc
+      - php7.3-xsl
+      - php7.3-zip
+      - php-gettext
+  notify:
+     - reload php7.3
+
+- name: Enable PHP 7.3
+  file: src=../conf-available/php7.3-fpm.conf dest=/etc/apache2/conf-enabled/php7.3-fpm.conf state=link force=yes
+  notify:
+      - reload apache
+

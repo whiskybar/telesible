@@ -1,0 +1,18 @@
+- hosts: all
+  tasks:
+    - name: remove root on the source
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        backrefs: yes
+        regexp: "(^AllowUsers.*)(root@juro.t3.cz\\s*)(.*)"
+        line: "\\1\\2"
+
+    - name: allow root on the source
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        backrefs: yes
+        regexp: "(^AllowUsers.*)"
+        line: "\\1 root@raptor.dc3.cz"
+
+    - name: reload ssh server
+      service: name=ssh state=reloaded

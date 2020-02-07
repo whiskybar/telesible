@@ -1,0 +1,30 @@
+- name: upgrade all packages
+  apt: update_cache=yes upgrade=dist
+
+- name: install useful packages
+  apt:
+    name:
+      - aptitude
+      - iotop
+      - iftop
+      - htop
+      - saidar
+      - ifstat
+      - dstat
+      - unp
+      - mosh
+      - nethogs
+      - ngrep
+      - ca-certificates
+      - multitail
+      - whois
+      - lftp
+      - rdiff-backup
+      - socat
+      - pv
+      - python3-dev
+      - python3-pip
+      - python3-virtualenv
+      - ipython3
+      - git
+      - mc

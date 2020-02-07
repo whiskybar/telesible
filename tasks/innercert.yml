@@ -1,0 +1,20 @@
+- name: query certificate details
+  block:
+    - name: find the issuer
+      openssl_certificate_info: path=/etc/ssl/certs/{{ item }}.crt
+      register: cert
+
+    - name: check the issuer
+      set_fact: le_domains="{{ le_domains + [item] }}"
+      when: 
+        - "'*' not in cert.subject.commonName"
+        - "'Let\\'s Encrypt' == cert.issuer.organizationName"
+
+    - name: find the altnames
+      set_fact: altnames="{{ cert.subject_alt_name | map('replace', 'DNS:', '') | join('\n') }}"
+
+    - name: store the altnames
+      set_fact: le_altnames="{{ le_altnames + [(item, altnames)] }}"
+  rescue:
+    - name: querying certificate failed
+      debug: msg="{{ item }}"

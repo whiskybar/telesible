@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DBNAME="$1"
+USER="$2"
+PASSWORD="$3"
+
+[ -z "$PASSWORD" ] && { echo "Usage: $(basename $0) DBNAME USERNAME PASSWORD" >&2; exit 1; }
+
+mysql -e"CREATE DATABASE \`$DBNAME\`; GRANT ALL ON \`$DBNAME\`.* TO '$USER'@'localhost' IDENTIFIED BY '$PASSWORD';"
+

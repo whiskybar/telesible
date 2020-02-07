@@ -1,0 +1,65 @@
+- hosts: web
+  vars:
+    local_certs: "{{ lookup('fileglob', '/etc/ssl/certs/*.crt', wantlist=True) | map('basename') | map('splitext') | map('first') | list }}"
+    domains: "{{ web.domains | map(attribute='domain') | list | union([inventory_hostname]) }}"
+  tasks:
+    - include: telesible.yml
+
+    - name: Apache server site config
+      copy: src=../roles/web/files/etc/apache2/sites-enabled/000-default.conf dest=/etc/apache2/sites-enabled/000-default.conf
+      notify:
+        - reload apache
+        
+    - name: Apache site config
+      template: src=../roles/web/templates/etc/apache2/sites-enabled/~generated.conf dest=/etc/apache2/sites-enabled/~generated.conf
+      notify:
+        - reload apache
+        
+    - name: PHP custom config for the server site
+      copy: src=../roles/web/files/host.conf dest="/etc/apache2/conf.d/{{ inventory_hostname }}.conf"
+      notify:
+        - reload apache
+
+    - name: PHP custom config 
+      copy: src=../roles/web/files/etc/apache2/conf.d dest=/etc/apache2/conf.d
+      notify:
+        - reload apache
+
+    - name: site custom certificates - public keys
+      copy: src=/etc/ssl/certs/{{ item }}.crt dest=/etc/ssl/certs/{{ item }}.crt
+      loop: "{{ local_certs | intersect(domains) }}"
+      notify:
+        - reload apache
+
+    - name: site custom certificates - private keys
+      copy: src=/etc/ssl/private/{{ item }}.key dest=/etc/ssl/private/{{ item }}.key mode=0600
+      loop: "{{ local_certs | intersect(domains) }}"
+      notify:
+        - reload apache
+
+    - name: remote certificates
+      find: paths=/etc/ssl/certs patterns=*.crt
+      register: remote_certs
+
+    - name: remove old certificates - public keys
+      file: path=/etc/ssl/certs/{{ item }}.crt state=absent
+      loop: "{{ remote_certs.files | map(attribute='path') | map('basename') | map('splitext') | map('first') | list | difference(local_certs) }}"
+      notify:
+        - reload apache
+
+    - name: remove old certificates - private keys
+      file: path=/etc/ssl/private/{{ item }}.key state=absent
+      loop: "{{ remote_certs.files | map(attribute='path') | map('basename') | map('splitext') | map('first') | list | difference(local_certs) }}"
+      notify:
+        - reload apache
+
+    - name: site custom configs for Apache 2.4
+      template: src=../roles/web/templates/etc/apache2/sites-enabled/{{ item.domain }}.conf dest=/etc/apache2/sites-enabled/{{ item.domain }}.conf
+      loop: "{{ web.domains }}"
+      when: "('../templates/etc/apache2/sites-enabled/' + item.domain + '.conf') is exists"
+      notify:
+        - reload apache
+
+  handlers:
+    - name: reload apache
+      service: name=apache2 state=reloaded

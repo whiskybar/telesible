@@ -1,0 +1,2 @@
+- name: reload exim
+  service: name=exim4 state=reloaded

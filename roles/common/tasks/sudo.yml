@@ -1,0 +1,2 @@
+- name: install sudoers
+  copy: src=etc/sudoers dest=/etc/sudoers mode=440

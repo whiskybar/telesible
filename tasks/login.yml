@@ -1,0 +1,7 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: allow the current root to log in
+      authorized_key: user=root key="{{ lookup('file', '/var/lib/rundeck/.ssh/id_rsa.pub') }}"
+
+    - ping:
